@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Next.js Codebase Auditor</title>
+  <meta name="author" content="Founder Bilal - nexagaze">
+  <meta name="keywords" content="Next.js auditor, React code analyzer, performance audit, memory leak detection, code review, nexagaze, bilal, AI, open source, behavior tracking">
+  <link rel="icon" href="data:,">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: #0f172a; min-height: 100vh; padding: 2rem; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h2 { color: #38bdf8; margin-bottom: 0.25rem; }
+    .subtitle { color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem; }
+    .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width:720px) { .panels { grid-template-columns: 1fr; } }
+    .panel { background: #1e293b; border-radius: 12px; padding: 1rem; }
+    .panel h3 { color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    textarea { width: 100%; height: 400px; padding: 0.75rem; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; font-size: 0.82rem; font-family: 'Cascadia Code', 'Fira Code', monospace; resize: vertical; outline: none; tab-size: 2; }
+    textarea:focus { border-color: #38bdf8; }
+    #resultArea { overflow-y: auto; height: 400px; }
+    .score-wrap { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+    .score-ring { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; }
+    .score-ring.good { background: #14532d; color: #4ade80; border: 3px solid #4ade80; }
+    .score-ring.ok { background: #451a03; color: #fb923c; border: 3px solid #fb923c; }
+    .score-ring.bad { background: #450a0a; color: #f87171; border: 3px solid #f87171; }
+    .issue { padding: 0.6rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.82rem; }
+    .issue.high { background: #450a0a; border-left: 3px solid #ef4444; }
+    .issue.medium { background: #451a03; border-left: 3px solid #fb923c; }
+    .issue.low { background: #1e1b0a; border-left: 3px solid #eab308; }
+    .issue .title { font-weight: 600; color: #e2e8f0; }
+    .issue .meta { color: #94a3b8; font-size: 0.75rem; margin: 0.15rem 0; }
+    .issue .msg { color: #cbd5e1; margin: 0.25rem 0; }
+    .issue .fix { background: #0f172a; padding: 0.4rem; border-radius: 4px; color: #22c55e; font-family: monospace; font-size: 0.78rem; white-space: pre-wrap; margin-top: 0.25rem; }
+    .actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
+    .actions button { padding: 0.6rem 1.2rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    #auditBtn { background: #38bdf8; color: #0f172a; flex: 1; }
+    #auditBtn:hover { background: #0ea5e9; }
+    #auditBtn:disabled { opacity: 0.5; }
+    #clearBtn { background: #334155; color: #94a3b8; }
+    #demoBtn, #demoBtn2 { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+    .summary-line { color: #94a3b8; font-size: 0.82rem; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Next.js Codebase Auditor</h2>
+    <p class="subtitle">Paste any React/Next.js component — AI finds bottlenecks, memory leaks &amp; bad hooks</p>
+    <div class="panels">
+      <div class="panel">
+        <h3>Component Code</h3>
+        <textarea id="codeInput" placeholder="// Paste your React/Next.js component here..."></textarea>
+        <div class="actions">
+          <button id="auditBtn">Audit Code</button>
+          <button id="demoBtn">Demo: Leak</button>
+          <button id="demoBtn2">Demo: Perf</button>
+          <button id="clearBtn">Clear</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Audit Results</h3>
+        <div id="resultArea">
+          <div style="color:#64748b;text-align:center;margin-top:8rem;">Paste code and click Audit</div>
+        </div>
+      </div>
+    </div>
+    <div id="summaryLine" class="summary-line">&nbsp;</div>
+  </div>
+
+  <script>
+    const codeInput = document.getElementById('codeInput');
+    const resultArea = document.getElementById('resultArea');
+    const summaryLine = document.getElementById('summaryLine');
+    const auditBtn = document.getElementById('auditBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const demoBtn = document.getElementById('demoBtn');
+    const demoBtn2 = document.getElementById('demoBtn2');
+
+    function renderIssues(issues, score) {
+      if (!issues || issues.length === 0) {
+        resultArea.innerHTML = '<div style="color:#22c55e;text-align:center;margin-top:8rem;">No issues found &#10003;</div>';
+        return;
+      }
+      let html = `<div class="score-wrap"><div class="score-ring ${score >= 70 ? 'good' : score >= 40 ? 'ok' : 'bad'}">${score}</div><div style="color:#94a3b8;font-size:0.8rem;">${issues.length} issue${issues.length > 1 ? 's' : ''} found</div></div>`;
+      issues.forEach((iss, i) => {
+        html += `<div class="issue ${iss.severity || 'low'}">
+          <div class="title">#${i + 1} [${iss.type || 'issue'}] <span style="float:right;text-transform:uppercase;font-size:0.7rem;">${iss.severity || 'low'}</span></div>
+          <div class="meta">Line ${iss.line || '?'}</div>
+          <div class="msg">${iss.message || ''}</div>
+          ${iss.fix ? `<div class="fix">${iss.fix}</div>` : ''}
+        </div>`;
+      });
+      resultArea.innerHTML = html;
+    }
+
+    async function audit() {
+      const code = codeInput.value.trim();
+      if (!code) return;
+      auditBtn.disabled = true;
+      auditBtn.textContent = 'Auditing...';
+      resultArea.innerHTML = '<div style="color:#64748b;text-align:center;margin-top:8rem;">Analyzing with Ollama...</div>';
+      summaryLine.textContent = 'Running analysis...';
+      try {
+        const res = await fetch('/audit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        renderIssues(data.issues, data.score);
+        summaryLine.textContent = data.summary || 'Done';
+      } catch (err) {
+        resultArea.innerHTML = `<div style="color:#ef4444;text-align:center;margin-top:8rem;">Error: ${err.message}</div>`;
+      }
+      auditBtn.disabled = false;
+      auditBtn.textContent = 'Audit Code';
+    }
+
+    auditBtn.addEventListener('click', audit);
+    clearBtn.addEventListener('click', () => { codeInput.value = ''; resultArea.innerHTML = '<div style="color:#64748b;text-align:center;margin-top:8rem;">Paste code and click Audit</div>'; summaryLine.textContent = '&nbsp;'; });
+
+    demoBtn.addEventListener('click', () => {
+      codeInput.value = `import { useState, useEffect } from 'react';
+
+export default function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    fetch('/api/user/' + userId).then(r => r.json()).then(setUser);
+    // Missing: cleanup + abort controller
+    // Missing: userId in deps
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('Polling...');
+    }, 1000);
+    // Missing: cleanup clearInterval
+  });
+
+  return (
+    <div>
+      <h3>{user?.name}</h3>
+      <p>{user?.email}</p>
+      <ExpensiveComponent data={user} />
+    </div>
+  );
+}
+
+function ExpensiveComponent({ data }) {
+  const processed = data?.items?.map(i => {
+    let sum = 0;
+    for (let x = 0; x < 100000; x++) sum += x;
+    return { ...i, sum };
+  });
+  return <pre>{JSON.stringify(processed)}</pre>;
+}`;
+      resultArea.innerHTML = '<div style="color:#64748b;text-align:center;margin-top:8rem;">Demo loaded — click Audit</div>';
+    });
+
+    demoBtn2.addEventListener('click', () => {
+      codeInput.value = `import { useState, useCallback } from 'react';
+
+export default function SearchPage() {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSearch(val) {
+    setLoading(true);
+    const res = await fetch('/api/search?q=' + val);
+    const data = await res.json();
+    setResults(data);
+    setLoading(false);
+  }
+
+  // Bad: inline function causes re-render
+  // Bad: no debounce on search
+  // Bad: no error handling
+  // Bad: stale closure if component re-renders
+
+  return (
+    <div>
+      <input onChange={e => handleSearch(e.target.value)} placeholder="Search..." />
+      {loading && <Spinner />}
+      {results.map(r => <ResultItem key={r.id} item={r} onClick={() => navigate(r.id)} />)}
+      <button onClick={() => setQuery('')}>Clear</button>
+    </div>
+  );
+}
+
+function ResultItem({ item, onClick }) {
+  // Bad: inline onClick prop causes re-render of every item
+  return <div onClick={onClick}>{item.title}</div>;
+}
+
+function Spinner() {
+  // Missing: React.memo
+  return <div>Loading...</div>;
+}`;
+      resultArea.innerHTML = '<div style="color:#64748b;text-align:center;margin-top:8rem;">Demo loaded — click Audit</div>';
+    });
+
+    document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.ready === 'Enter') audit(); });
+  </script>
+
+  <div style="text-align:center;padding:1rem;color:#475569;font-size:0.75rem;border-top:1px solid #1e293b;">
+    nexagaze project &mdash; built by Founder Bilal &bull;
+    <a href="mailto:ai@nexagaze.com" style="color:#64748b;">ai@nexagaze.com</a> &bull;
+    <a href="https://wa.me/9203103860653" style="color:#64748b;">03103860653</a>
+  </div>
+</body>
+</html>
