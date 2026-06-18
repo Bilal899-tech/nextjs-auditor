@@ -3,48 +3,127 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Next.js Codebase Auditor</title>
+  <title>Next.js Codebase Auditor — Nexagaze</title>
   <meta name="author" content="Founder Bilal - nexagaze">
   <meta name="keywords" content="Next.js auditor, React code analyzer, performance audit, memory leak detection, code review, nexagaze, bilal, AI, open source, behavior tracking">
   <link rel="icon" href="data:,">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-    body { background: #0f172a; min-height: 100vh; padding: 2rem; }
-    .container { max-width: 900px; margin: 0 auto; }
-    h2 { color: #38bdf8; margin-bottom: 0.25rem; }
-    .subtitle { color: #64748b; font-size: 0.85rem; margin-bottom: 1.25rem; }
+    body { background: #ffffff; color: #1a1a1a; min-height: 100vh; }
+    nav { position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid #e5e7eb; padding: 0.85rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+    nav .logo { font-size: 1.2rem; font-weight: 700; color: #16a34a; text-decoration: none; }
+    nav .logo span { color: #1a1a1a; }
+    nav .links { display: flex; gap: 1.5rem; align-items: center; }
+    nav .links a { text-decoration: none; color: #6b7280; font-size: 0.85rem; font-weight: 500; transition: color 0.2s; }
+    nav .links a:hover, nav .links a.active { color: #16a34a; }
+    .container { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    h2 { color: #16a34a; margin-bottom: 0.25rem; }
+    .subtitle { color: #6b7280; font-size: 0.85rem; margin-bottom: 1.25rem; }
     .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
     @media (max-width:720px) { .panels { grid-template-columns: 1fr; } }
-    .panel { background: #1e293b; border-radius: 12px; padding: 1rem; }
-    .panel h3 { color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.5rem; }
-    textarea { width: 100%; height: 400px; padding: 0.75rem; border: 1px solid #334155; border-radius: 8px; background: #0f172a; color: #e2e8f0; font-size: 0.82rem; font-family: 'Cascadia Code', 'Fira Code', monospace; resize: vertical; outline: none; tab-size: 2; }
-    textarea:focus { border-color: #38bdf8; }
+    .panel { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1rem; }
+    .panel h3 { color: #16a34a; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    textarea { width: 100%; height: 400px; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px; background: #ffffff; color: #1a1a1a; font-size: 0.82rem; font-family: 'Cascadia Code', 'Fira Code', monospace; resize: vertical; outline: none; tab-size: 2; }
+    textarea:focus { border-color: #22c55e; }
     #resultArea { overflow-y: auto; height: 400px; }
     .score-wrap { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
     .score-ring { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; }
-    .score-ring.good { background: #14532d; color: #4ade80; border: 3px solid #4ade80; }
-    .score-ring.ok { background: #451a03; color: #fb923c; border: 3px solid #fb923c; }
-    .score-ring.bad { background: #450a0a; color: #f87171; border: 3px solid #f87171; }
+    .score-ring.good { background: #dcfce7; color: #16a34a; border: 3px solid #22c55e; }
+    .score-ring.ok { background: #fef3c7; color: #d97706; border: 3px solid #f59e0b; }
+    .score-ring.bad { background: #fecaca; color: #dc2626; border: 3px solid #ef4444; }
     .issue { padding: 0.6rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.82rem; }
-    .issue.high { background: #450a0a; border-left: 3px solid #ef4444; }
-    .issue.medium { background: #451a03; border-left: 3px solid #fb923c; }
-    .issue.low { background: #1e1b0a; border-left: 3px solid #eab308; }
-    .issue .title { font-weight: 600; color: #e2e8f0; }
-    .issue .meta { color: #94a3b8; font-size: 0.75rem; margin: 0.15rem 0; }
-    .issue .msg { color: #cbd5e1; margin: 0.25rem 0; }
-    .issue .fix { background: #0f172a; padding: 0.4rem; border-radius: 4px; color: #22c55e; font-family: monospace; font-size: 0.78rem; white-space: pre-wrap; margin-top: 0.25rem; }
+    .issue.high { background: #fef2f2; border-left: 3px solid #ef4444; }
+    .issue.medium { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .issue.low { background: #fefce8; border-left: 3px solid #eab308; }
+    .issue .title { font-weight: 600; color: #1a1a1a; }
+    .issue .meta { color: #6b7280; font-size: 0.75rem; margin: 0.15rem 0; }
+    .issue .msg { color: #4b5563; margin: 0.25rem 0; }
+    .issue .fix { background: #f9fafb; padding: 0.4rem; border-radius: 4px; color: #16a34a; border: 1px solid #e5e7eb; font-family: monospace; font-size: 0.78rem; white-space: pre-wrap; margin-top: 0.25rem; }
     .actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
     .actions button { padding: 0.6rem 1.2rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-    #auditBtn { background: #38bdf8; color: #0f172a; flex: 1; }
-    #auditBtn:hover { background: #0ea5e9; }
+    #auditBtn { background: #22c55e; color: #ffffff; flex: 1; }
+    #auditBtn:hover { background: #16a34a; }
     #auditBtn:disabled { opacity: 0.5; }
-    #clearBtn { background: #334155; color: #94a3b8; }
-    #demoBtn, #demoBtn2 { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
-    .summary-line { color: #94a3b8; font-size: 0.82rem; margin-top: 0.5rem; }
+    #clearBtn { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+    #demoBtn, #demoBtn2 { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+    .summary-line { color: #6b7280; font-size: 0.82rem; margin-top: 0.5rem; }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    @keyframes float2 { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(5deg); } }
+    .fade-in { opacity: 0; transform: translateY(30px); transition: all 0.6s ease-out; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+    .hero { min-height: 85vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 2rem; position: relative; overflow: hidden; }
+    .hero h1 { font-size: 3rem; line-height: 1.1; margin-bottom: 1rem; animation: fadeInUp 0.8s ease-out; color: #16a34a; }
+    .hero p { font-size: 1.1rem; color: #6b7280; max-width: 560px; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out 0.2s both; }
+    .hero .btns { display: flex; gap: 1rem; animation: fadeInUp 0.8s ease-out 0.4s both; }
+    .hero .btns .btn-primary { padding: 0.85rem 2rem; background: #22c55e; color: #fff; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: background 0.2s; }
+    .hero .btns .btn-primary:hover { background: #16a34a; }
+    .hero .btns .btn-outline { padding: 0.85rem 2rem; background: transparent; color: #16a34a; border: 2px solid #16a34a; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: all 0.2s; }
+    .hero .btns .btn-outline:hover { background: #f0fdf4; }
+    .hero .float-el { position: absolute; border-radius: 50%; opacity: 0.08; pointer-events: none; }
+    .hero .float-el:nth-child(1) { width: 110px; height: 110px; background: #22c55e; top: 8%; left: 12%; animation: float 6s ease-in-out infinite; }
+    .hero .float-el:nth-child(2) { width: 75px; height: 75px; background: #16a34a; top: 65%; right: 10%; animation: float 8s ease-in-out infinite 1s; }
+    .hero .float-el:nth-child(3) { width: 55px; height: 55px; background: #22c55e; bottom: 10%; left: 20%; animation: float2 7s ease-in-out infinite 0.5s; border-radius: 8px; }
+    .hero .float-el:nth-child(4) { width: 95px; height: 95px; background: #16a34a; top: 15%; right: 30%; animation: float 9s ease-in-out infinite 2s; }
+    .hero .float-el:nth-child(5) { width: 40px; height: 40px; background: #22c55e; bottom: 40%; right: 25%; animation: float2 5s ease-in-out infinite 1.5s; border-radius: 8px; }
+    footer { text-align: center; padding: 1.5rem; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 0.8rem; }
+    footer a { color: #16a34a; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    .nav { animation: navslide 0.6s ease-out 0.2s both; }
+    @keyframes navslide { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
-  <div class="container">
+<style>
+#nexasplash {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #ffffff; z-index: 99999;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  animation: nexafade 0.6s ease-out 1.5s forwards;
+}
+#nexasplash .nx-logo {
+  font-size: 48px; font-weight: 900; color: #ea580c;
+  letter-spacing: 3px; font-family: system-ui, -apple-system, sans-serif;
+  animation: nxpop 0.5s ease-out;
+}
+#nexasplash .nx-sub {
+  font-size: 13px; color: #9ca3af; margin-top: 8px;
+  letter-spacing: 5px; text-transform: uppercase;
+}
+@keyframes nexafade { to { opacity: 0; pointer-events: none; } }
+@keyframes nxpop { 0% { opacity: 0; transform: scale(0.5); } 70% { transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
+</style>
+<div id="nexasplash">
+  <div class="nx-logo">NEXAGAZE</div>
+  <div class="nx-sub">AI-Powered Solutions</div>
+</div>
+  <nav>
+    <a href="/" class="logo">Nexagaze<span>.</span></a>
+    <div class="links">
+      <a href="/Admin-cata-Agent">Catalog Agent</a>
+      <a href="/auto-blog-writer">Blog Writer</a>
+      <a href="/nextjs-auditor" class="active">Code Auditor</a>
+      <a href="/semantic-search">Semantic Search</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="float-el"></div>
+    <div class="float-el"></div>
+    <div class="float-el"></div>
+    <div class="float-el"></div>
+    <div class="float-el"></div>
+    <h1>Next.js Codebase Auditor</h1>
+    <p>Paste any React/Next.js component — AI finds bottlenecks, memory leaks &amp; bad hooks instantly.</p>
+    <div class="btns">
+      <a href="#tool" class="btn-primary">Audit Code</a>
+      <a href="#demoBtn" class="btn-outline">Try Demo</a>
+    </div>
+  </section>
+
+  <div class="container fade-in" id="tool">
     <h2>Next.js Codebase Auditor</h2>
     <p class="subtitle">Paste any React/Next.js component — AI finds bottlenecks, memory leaks &amp; bad hooks</p>
     <div class="panels">
@@ -61,12 +140,18 @@
       <div class="panel">
         <h3>Audit Results</h3>
         <div id="resultArea">
-          <div style="color:#64748b;text-align:center;margin-top:8rem;">Paste code and click Audit</div>
+          <div style="color:#9ca3af;text-align:center;margin-top:8rem;">Paste code and click Audit</div>
         </div>
       </div>
     </div>
     <div id="summaryLine" class="summary-line">&nbsp;</div>
   </div>
+
+  <footer>
+    Nexagaze &mdash; Built by <a href="https://wa.me/9203103860653" target="_blank">Nexagaze Founder Bilal</a> &bull;
+    <a href="mailto:ai@nexagaze.com">ai@nexagaze.com</a> &bull;
+    <a href="https://wa.me/9203103860653" target="_blank">03103860653</a>
+  </footer>
 
   <script>
     const codeInput = document.getElementById('codeInput');
@@ -82,7 +167,7 @@
         resultArea.innerHTML = '<div style="color:#22c55e;text-align:center;margin-top:8rem;">No issues found &#10003;</div>';
         return;
       }
-      let html = `<div class="score-wrap"><div class="score-ring ${score >= 70 ? 'good' : score >= 40 ? 'ok' : 'bad'}">${score}</div><div style="color:#94a3b8;font-size:0.8rem;">${issues.length} issue${issues.length > 1 ? 's' : ''} found</div></div>`;
+      let html = `<div class="score-wrap"><div class="score-ring ${score >= 70 ? 'good' : score >= 40 ? 'ok' : 'bad'}">${score}</div><div style="color:#6b7280;font-size:0.8rem;">${issues.length} issue${issues.length > 1 ? 's' : ''} found</div></div>`;
       issues.forEach((iss, i) => {
         html += `<div class="issue ${iss.severity || 'low'}">
           <div class="title">#${i + 1} [${iss.type || 'issue'}] <span style="float:right;text-transform:uppercase;font-size:0.7rem;">${iss.severity || 'low'}</span></div>
@@ -99,7 +184,7 @@
       if (!code) return;
       auditBtn.disabled = true;
       auditBtn.textContent = 'Auditing...';
-      resultArea.innerHTML = '<div style="color:#64748b;text-align:center;margin-top:8rem;">Analyzing with Ollama...</div>';
+      resultArea.innerHTML = '<div style="color:#6b7280;text-align:center;margin-top:8rem;">Analyzing with Ollama...</div>';
       summaryLine.textContent = 'Running analysis...';
       try {
         const res = await fetch('/audit', {
@@ -118,7 +203,7 @@
     }
 
     auditBtn.addEventListener('click', audit);
-    clearBtn.addEventListener('click', () => { codeInput.value = ''; resultArea.innerHTML = '<div style="color:#64748b;text-align:center;margin-top:8rem;">Paste code and click Audit</div>'; summaryLine.textContent = '&nbsp;'; });
+    clearBtn.addEventListener('click', () => { codeInput.value = ''; resultArea.innerHTML = '<div style="color:#9ca3af;text-align:center;margin-top:8rem;">Paste code and click Audit</div>'; summaryLine.textContent = '&nbsp;'; });
 
     demoBtn.addEventListener('click', () => {
       codeInput.value = `import { useState, useEffect } from 'react';
@@ -156,7 +241,7 @@ function ExpensiveComponent({ data }) {
   });
   return <pre>{JSON.stringify(processed)}</pre>;
 }`;
-      resultArea.innerHTML = '<div style="color:#64748b;text-align:center;margin-top:8rem;">Demo loaded — click Audit</div>';
+      resultArea.innerHTML = '<div style="color:#6b7280;text-align:center;margin-top:8rem;">Demo loaded — click Audit</div>';
     });
 
     demoBtn2.addEventListener('click', () => {
@@ -199,16 +284,15 @@ function Spinner() {
   // Missing: React.memo
   return <div>Loading...</div>;
 }`;
-      resultArea.innerHTML = '<div style="color:#64748b;text-align:center;margin-top:8rem;">Demo loaded — click Audit</div>';
+      resultArea.innerHTML = '<div style="color:#6b7280;text-align:center;margin-top:8rem;">Demo loaded — click Audit</div>';
     });
 
     document.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.ready === 'Enter') audit(); });
-  </script>
 
-  <div style="text-align:center;padding:1rem;color:#475569;font-size:0.75rem;border-top:1px solid #1e293b;">
-    nexagaze project &mdash; built by Founder Bilal &bull;
-    <a href="mailto:ai@nexagaze.com" style="color:#64748b;">ai@nexagaze.com</a> &bull;
-    <a href="https://wa.me/9203103860653" style="color:#64748b;">03103860653</a>
-  </div>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
 </body>
 </html>
